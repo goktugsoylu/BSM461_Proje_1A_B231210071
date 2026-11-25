@@ -188,3 +188,101 @@ Senaryo kartındaki gerçek koşullar (`600 haber/s` ortalama, `2 kat` tepe yük
   * Tekrar eden haberler (`haber_id`) sayımları şişirmemek için tekilleştirildi.
   * Zorunlu alanlardan (`olay_zamani`, `haber_id`, `kaynak`, `kategori`, `baslik`, `metin`) herhangi biri boş/null olan kayıtlar silinip kaybedilmek yerine **izlenebilirlik ve hata ayıklama** amacıyla ayrı bir karantina tablosuna (**`s3a://islenmis/haber_karantina/` — 3.188 kayıt**) yazıldı.
   * Geriye kalan **1.991.971 temiz kayıt**, `tarih` ve `saat` sütunları eklenerek **`s3a://islenmis/haber_temiz/`** yoluna `repartition("tarih")` + `Parquet-zstd` ile (**14 dosya, 63,89 MB**) kaydedildi. (`1.991.971 + 3.188 + 4.841 = 2.000.000`)
+
+  ---
+
+## Aşama 3: Toplu Hat (Adım 8 & 14 · Z5, Z10 Grafikler, Z11 Kırılma)
+
+* **Kanıt Dosyaları (Aşama 3):** `kanit/explain-1.txt`, `kanit/spark-ui-stages.png`, `kanit/spark-ui-tasks.png`, `kanit/olcumler.csv`, `kanit/asama3-ozet.txt`, `kanit/grafik1_kaynak_karsilastirma.png`, `kanit/grafik2_zaman_seyri.png`, `kanit/kirilma-deneyi.txt`
+
+---
+
+### 1. Z5 — Toplu İş Sonuçları, `explain()`, Spark UI ve Performans Kararı *(Rapor: Bölüm 7)*
+
+#### Toplu İş Akışı ve Map / Shuffle / Reduce Yapısı
+`is/toplu_is.py` toplu hattı şu sırayla çalışır:
+1. **Okuma & Temizleme (Map):** Ham JSON'dan (2.000.000 kayıt) üretilmiş ve karantina ayrımı yapılmış `s3a://islenmis/haber_temiz/` (1.991.971 kayıt, `Parquet-zstd`, `tarih=.../` bölümlü) tablosu ile `s3a://ham/boyut/haber/kaynaklar.csv` (6 satır) okunur.
+2. **Join (Map tarafı — Shuffle yok):** 6 satırlık `kaynaklar.csv` boyut tablosu `BroadcastHashJoin` ile her görevin belleğine yayınlandığı için 1,99 milyon haber kaydı join sırasında ağdan taşınmaz.
+3. **Toplulaştırma ve Sıralama (Combiner + Shuffle + Reduce):** `groupBy(...)` öncesinde her görev kendi bölümünde `partial_count(1)` (combiner) çalıştırır; ardından aynı anahtarları birleştirmek için **`hashpartitioning` (kaçınılmaz shuffle)** ve sonuçları sıralamak için **`rangepartitioning` (sıralama shuffle'ı)** yapılır.
+4. **Yazma:** Özet tablolar S3'e (`s3a://islenmis/haber_ozet/...`) Parquet olarak ve grafik çizimi için `kanit/veri_*.csv` dosyalarına yazılır.
+
+#### Toplu Soru 1 Sonuçları — Kaynak Karşılaştırması (`kaynaklar.csv` Join)
+
+| Kaynak | Tür | Şehir | Kuruluş Yılı | 14 Günlük Toplam Haber | Günlük Ort. Haber | Ort. Kategori Çeşidi | Toplam Pay (%) |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `ajans-kuzey` | ajans | İstanbul | 1952 | **963.881** | 68.848,6 | 8,00 | **%48,4** |
+| `ajans-guney` | ajans | Adana | 1987 | **399.759** | 28.554,2 | 8,00 | **%20,1** |
+| `gazete-merkez` | gazete | Ankara | 1964 | 239.265 | 17.090,4 | 8,00 | %12,0 |
+| `portal-hizli` | portal | İstanbul | 2011 | 165.232 | 11.802,3 | 8,00 | %8,3 |
+| `yerel-haber` | gazete | Sakarya | 1998 | 124.730 | 8.909,3 | 8,00 | %6,3 |
+| `ekonomi-gunluk` | gazete | İstanbul | 1979 | 99.104 | 7.078,9 | 8,00 | %5,0 |
+
+#### `explain(mode="formatted")` Yorumu (`kanit/explain-1.txt` — H6'daki 5 Soru)
+Son 7 gün (`tarih >= 2026-11-18`) ve gündüz saatleri (`saat` 08–18) filtreli, `kaynaklar.csv` join'li ve `(tur, sehir, kategori)` gruplamalı sorgunun fiziksel planı aşağıdan yukarı incelendiğinde:
+
+| # | Kontrol Sorusu (H6) | `explain-1.txt` Çıktısındaki Karşılığı | Yorum |
+| :-: | :--- | :--- | :--- |
+| **1** | **Kaç shuffle (`Exchange`) var?** | **2 adet `Exchange`** (`(10)` ve `(12)`) + 1 adet `BroadcastExchange` (`(6)`) → toplam **3 aşama** | Büyük olay tablosu join için hiç shuffle edilmedi; yalnızca gruplama ve sıralamada shuffle var |
+| **2** | **Her `Exchange` neden orada?** | `(6) BroadcastExchange`: 6 satırlık CSV'yi yayınlar · `(10) hashpartitioning(tur, sehir, kategori, 8)`: `groupBy` için · `(12) rangepartitioning(haber_sayisi DESC, 8)`: `orderBy` için | `groupBy` shuffle'ı kaçınılmazdır; `orderBy` yalnızca küresel sıralama istendiğinde ödenir |
+| **3** | **Ön-toplama (combiner) var mı?** | **Evet** — `(9) HashAggregate` içinde `partial_count(1)` | Her görev kendi bölümünü ön-sayar; shuffle'a milyonlarca satır yerine yalnızca ara toplamlar gider |
+| **4** | **Filtre okuyucuya indi mi? (Z2 + Z4)** | `PartitionFilters: [isnotnull(tarih), (tarih >= 2026-11-18)]` ve `PushedFilters: [IsNotNull(saat), GreaterThanOrEqual(saat,8), LessThanOrEqual(saat,18), IsNotNull(kaynak)]` | **Bölüm budama** (14 günden yalnızca 7 gün okundu) ve **koşul itme** (predicate pushdown) etkin |
+| **5** | **Gereksiz sütun okunuyor mu? (Z2)** | `ReadSchema: struct<kaynak:string,kategori:string,saat:int>` (3 / 7 sütun) | **Sütun budama** (projection pushdown) etkin; en ağır sütunlar olan `baslik` ve `metin` hiç okunmadı |
+
+#### Spark UI Analizi (`kanit/spark-ui-stages.png` ve `kanit/spark-ui-tasks.png`)
+* **Görev süresi dağılımı (Stage 203 — 14/14 görev):** `Min = 39 ms`, `25th = 42 ms`, `Median = 0,2 s`, `75th = 0,2 s`, `Max = 0,2 s`. Aktif veri okuyan 7 görevin tamamı eşit kayıt (~142,2 bin kayıt) ve eşit sürede (`0,2 s`) tamamlanmıştır; kuyrukta takılan yavaş görev (**straggler**) yoktur.
+* **Combiner etkisi:** 7 aktif görev toplam **995.960 kayıt (1.383,5 KiB)** okuyup ön-toplama sonrası shuffle'a görev başına yalnızca **2,2 KiB / 48 kayıt** (toplam **15,5 KiB / 336 kayıt**) yazmıştır.
+* **Bellek ve kip:** Tüm görevlerde `GC Time = 0,0 ms` (bellek baskısı yok); `Executor ID = driver` görünmesi kitteki `local[*]` tek süreç sadeleştirmesini doğrular.
+
+#### Ölçümlü Performans Kararı (Aynı 1,99M Temiz Veri, 3 Tur Ortalama & Ortanca)
+Aynı sorgu (`tarih >= 2026-11-18`, `saat` 08–18, `kaynaklar.csv` join + `groupBy` + `orderBy`, 8 dosya / 32,00 MB okunan) üzerinde `spark.sql.shuffle.partitions` ve join stratejisi değiştirilerek **3'er kez** ölçüldü:
+
+| Ayar | 3 Tur Süreleri (s) | Ortalama (s) | Ortanca (s) | Join Stratejisi | Okunan Dosya / Veri |
+| :--- | :--- | :---: | :---: | :--- | :---: |
+| **Önce:** `SortMergeJoin` + 200 bölüm *(varsayılan)* | `1,15 · 0,71 · 0,67` | **0,84** | **0,71** | `SortMergeJoin` | 8 dosya · 32,00 MB |
+| **Ara:** `SortMergeJoin` + 8 bölüm | `0,69 · 0,55 · 0,54` | 0,59 | 0,55 | `SortMergeJoin` | 8 dosya · 32,00 MB |
+| **Sonra (Seçilen):** `BroadcastHashJoin` + 8 bölüm | `0,61 · 0,42 · 0,41` | **0,48** | **0,42** | `BroadcastHashJoin` | 8 dosya · 32,00 MB |
+
+* **Karar ve Gerekçe:** Shuffle bölüm sayısının 200'den 8'e düşürülmesi yerel makinedeki gereksiz boş görev başlatma maliyetini (task overhead) kaldırdı (`0,84 s → 0,59 s`). Ardından 6 satırlık boyut tablosu için `BroadcastHashJoin` etkinleştirilerek büyük olay tablosunun join için shuffle + sıralama yapması önlendi ve ortalama süre **0,84 s → 0,48 s**'ye (ortanca **0,71 s → 0,42 s**, **~1,75× hızlanma / %42,9 süre kazancı**) indirildi.
+
+---
+
+### 2. Z10 — İki Grafik ve Bulgular (Parça 3) *(Rapor: Bölüm 10)*
+
+* **Grafik 1 (`kanit/grafik1_kaynak_karsilastirma.png` — Toplu Soru 1):**
+  * *Tek cümlelik bulgu:* 14 günlük 1.991.971 temiz haberin **%68,5'ini** (`ajans-kuzey` %48,4 ve `ajans-guney` %20,1) yalnızca iki haber ajansı üretmekte olup, tüm kaynaklar her gün 8 kategorinin tamamında yayın yapmaktadır.
+* **Grafik 2 (`kanit/grafik2_zaman_seyri.png` — Toplu Soru 2):**
+  * *Tek cümlelik bulgu:* Haber akışı gece `01:00 UTC` (13,2 bin haber) ile sabah `06:00 UTC` (132,9 bin haber; Türkiye saatiyle 09:00) arasında **10 katlık** keskin bir günlük döngü sergilerken, `gündem` kategorisi 14 gün boyunca her gün ~52 bin haberle (**%36,59** pay) kesintisiz ilk sırada yer almaktadır.
+
+**14 Günlük Kategori Dağılımı Özeti:**
+
+| Kategori | 14 Günlük Toplam Haber | Pay (%) |
+| :--- | :---: | :---: |
+| `gündem` | 728.941 | %36,59 |
+| `kültür` | 294.953 | %14,81 |
+| `ekonomi` | 210.389 | %10,56 |
+| `sağlık` | 151.802 | %7,62 |
+| `dünya` | 151.639 | %7,61 |
+| `spor` | 151.596 | %7,61 |
+| `eğitim` | 151.357 | %7,60 |
+| `teknoloji` | 151.294 | %7,60 |
+
+---
+
+### 3. Z11 — "Bu Sistem Nerede Kırılır?" *(Toplu Hat & Depolama Kısmı · Rapor: Bölüm 11)*
+
+*(Not: Akış hattı, Kafka ve Elasticsearch kırılma noktaları 2. ve 3. ekip arkadaşları tarafından bu tabloya eklenecektir.)*
+
+| Kırılma Noktası | Tetikleyen Ne? | Belirtisi Ne — Neye Bakınca Görürsünüz? | Gerçek Bir Sistemde Ne Yaparsınız? |
+| :--- | :--- | :--- | :--- |
+| **Tek düğümlü S3 (SeaweedFS) kesintisi** *(✅ Denendi)* | Depolama sunucusu çöker veya ağdan kopar (`docker compose stop s3`) | Varsayılan S3A retry ayarlarıyla iş dakikalarca sessizce asılı kalır; retry sınırı aşılınca Spark günlüğünde `S3AFileSystem.getObjectMetadata` → `java.net.UnknownHostException: s3` hatası ve `EXIT_CODE=1` görünür (`docker compose ps` ve Spark sürücü logu) | Çok bölgeli, en az 3 kopyalı yönetilen nesne deposu (S3 / dağıtık Ceph-MinIO), kontrollü zaman aşımı + uyarı (alerting) ve iş orkestratöründe (Airflow) otomatik yeniden deneme |
+| **S3'te atomik olmayan yazma (yarım çıktı)** *(H4)* | Spark toplu işi Parquet dosyalarını S3'e yazarken yarıda çöker | Hata alınmadan eksik satır okunur (sessiz veri bozulması); S3 klasöründe `_temporary/` veya eksik gün dosyaları kalır | Ham Parquet yazımı yerine işlem günlüklü (**`_delta_log`**) tablo biçimine (**Delta Lake — Z7**) geçilir; teslim (commit) atomik olur |
+| **Çarpık anahtar / Join'de straggler & Driver OOM** *(H5, H6)* | `ajans-kuzey` (%48,4 pay) gibi sıcak bir anahtarda `groupBy`/`SortMergeJoin` veya büyük sonuçta yanlışlıkla `collect()` çağrısı | Spark UI → Stages/Tasks ekranında `Max` görev süresi `Median`'ın katları olur (%99'da takılma) veya Driver `OutOfMemoryError` ile çöker | `kaynak\|tarih` bileşik anahtarı, AQE (`skewJoin`), küçük tablolar için `BroadcastHashJoin`, büyük çıktıları `collect()` yerine doğrudan S3/Delta'ya yazma |
+
+#### Gerçekleştirilen Kırılma Deneyi Kanıtı (`kanit/kirilma-deneyi.txt`)
+* **Deney:** S3 (SeaweedFS) servisi `docker compose stop s3` komutuyla bilerek durduruldu ve `is/toplu_is.py` toplu işi çalıştırıldı.
+* **Ne gördük?**
+  1. **Varsayılan ayarlarla sessiz takılma:** Hadoop S3A bağlayıcısının varsayılan üstel bekleme (exponential backoff) yeniden denemeleri nedeniyle iş 5 dakikadan uzun süre hiçbir çıktı üretmeden asılı kaldı.
+  2. **Kontrollü zaman aşımıyla kesin hata:** `fs.s3a.attempts.maximum=2`, `fs.s3a.retry.limit=2` ve `5000 ms` zaman aşımı verildiğinde iş saniyeler içinde `EXIT_CODE=1` ile sonlandı; hata yığınında `org.apache.hadoop.fs.s3a.S3AFileSystem.getObjectMetadata` → `Invoker.retryUntranslated` → **`Caused by: java.net.UnknownHostException: s3`** görüldü.
+  3. **Kurtarma doğrulaması:** `docker compose start s3` ile servis yeniden açıldığında `araclar/dogrula.py` tüm kovaların (`ham`, `islenmis`, `tablolar`) ve mevcut verilerin kayıpsız geri geldiğini doğruladı.
+* **Neye bakınca gördük?** `docker compose ps` çıktısı ve Spark sürücü hata günlüğü (`kanit/kirilma-deneyi.txt`).
+* **Gerçek üretimde ne yapardık?** Tek düğümlü SeaweedFS yerine yüksek erişilebilir (en az 3 kopya, çok erişilebilirlik bölgeli) S3/Ceph kümesi kullanılır; toplu işlerde sessiz takılmayı önlemek için S3A zaman aşımı/deneme sınırları açıkça tanımlanır, başarısız işler izleme panosuna (Prometheus/Alertmanager) alarm düşürür ve yarım yazmalara karşı çıktı katmanında Delta Lake (Z7) kullanılır.

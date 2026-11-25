@@ -34,3 +34,9 @@ Asama2_Depolama,Z10,kirli_veri,null_veya_bos_baslik,809,kayit,%0.04
 Asama2_Depolama,Z10,kirli_veri,null_veya_bos_metin,812,kayit,%0.041
 Asama2_Depolama,Z10,temizleme_sonucu,temiz_kayit_sayisi,1991971,kayit,"14 dosya, 63.89 MB"
 Asama2_Depolama,Z10,temizleme_sonucu,karantina_kayit_sayisi,3188,kayit,eksik/bozuk alanlar
+Asama3_TopluHat,Z5,1_Once_SortMerge_200bolum,ortalama_sure,0.86,s,"3 tur: [1.27, 0.73, 0.57], SortMergeJoin"
+Asama3_TopluHat,Z5,1_Once_SortMerge_200bolum,ortanca_sure,0.73,s,"8 dosya, 32.0 MB"
+Asama3_TopluHat,Z5,2_Ara_SortMerge_8bolum,ortalama_sure,0.62,s,"3 tur: [0.69, 0.59, 0.57], SortMergeJoin"
+Asama3_TopluHat,Z5,2_Ara_SortMerge_8bolum,ortanca_sure,0.59,s,"8 dosya, 32.0 MB"
+Asama3_TopluHat,Z5,3_Sonra_Broadcast_8bolum,ortalama_sure,0.5,s,"3 tur: [0.60, 0.45, 0.45], BroadcastHashJoin"
+Asama3_TopluHat,Z5,3_Sonra_Broadcast_8bolum,ortanca_sure,0.45,s,"8 dosya, 32.0 MB"

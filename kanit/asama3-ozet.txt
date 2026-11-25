@@ -1,0 +1,74 @@
+=== TOPLU SORU 1: KAYNAK KARSILASTIRMASI (kaynaklar.csv JOIN) ===
+Kaynak          Tur      Sehir          Toplam   GunlukOrt  KatCesit
+ajans-kuzey     ajans    İstanbul      963,881    68,848.6      8.00
+ajans-guney     ajans    Adana         399,759    28,554.2      8.00
+gazete-merkez   gazete   Ankara        239,265    17,090.4      8.00
+portal-hizli    portal   İstanbul      165,232    11,802.3      8.00
+yerel-haber     gazete   Sakarya       124,730     8,909.3      8.00
+ekonomi-gunluk  gazete   İstanbul       99,104     7,078.9      8.00
+
+=== TOPLU SORU 2A: GUNLUK KATEGORI SEYRI (EN YUKSEK 10 GUN-KATEGORI) ===
+  2026-11-13  gündem          52,297
+  2026-11-18  gündem          52,288
+  2026-11-20  gündem          52,218
+  2026-11-22  gündem          52,147
+  2026-11-23  gündem          52,124
+  2026-11-17  gündem          52,105
+  2026-11-12  gündem          52,064
+  2026-11-15  gündem          52,039
+  2026-11-11  gündem          51,995
+  2026-11-14  gündem          51,989
+
+=== TOPLU SORU 2B: SAATLIK HABER DAGILIMI (00-23) ===
+  Saat 00:00  ->    13,294
+  Saat 01:00  ->    13,176
+  Saat 02:00  ->    26,565
+  Saat 03:00  ->    53,132
+  Saat 04:00  ->    92,574
+  Saat 05:00  ->   119,768
+  Saat 06:00  ->   132,868
+  Saat 07:00  ->   132,627
+  Saat 08:00  ->   119,820
+  Saat 09:00  ->   119,568
+  Saat 10:00  ->   119,401
+  Saat 11:00  ->   119,500
+  Saat 12:00  ->   119,824
+  Saat 13:00  ->   119,618
+  Saat 14:00  ->   119,324
+  Saat 15:00  ->   106,574
+  Saat 16:00  ->   105,931
+  Saat 17:00  ->   106,306
+  Saat 18:00  ->    92,820
+  Saat 19:00  ->    66,311
+  Saat 20:00  ->    39,874
+  Saat 21:00  ->    26,332
+  Saat 22:00  ->    13,292
+  Saat 23:00  ->    13,472
+
+=== EXPLAIN(mode='formatted') OZETI (kanit/explain-1.txt) ===
+== Physical Plan ==
+AdaptiveSparkPlan (14)
++- Sort (13)
+   +- Exchange (12)
+      +- HashAggregate (11)
+         +- Exchange (10)
+            +- HashAggregate (9)
+               +- Project (8)
+                  +- BroadcastHashJoin Inner BuildRight (7)
+                     :- Project (3)
+                     :  +- Filter (2)
+                     :     +- Scan parquet  (1)
+                     +- BroadcastExchange (6)
+                        +- Filter (5)
+                           +- Scan csv  (4)
+  PartitionFilters: [isnotnull(tarih), (tarih >= 2026-11-18)]
+  PushedFilters: [IsNotNull(saat), GreaterThanOrEqual(saat,8), LessThanOrEqual(saat,18), IsNotNull(kaynak)]
+  ReadSchema: struct<kaynak:string,kategori:string,saat:int>
+  PushedFilters: [IsNotNull(kaynak)]
+  ReadSchema: struct<kaynak:string,tur:string,sehir:string>
+
+=== Z5 PERFORMANS KARARI (AYNI VERI, 3 TUR ORTALAMA & ORTANCA) ===
+Ayar                                        Ort(s)  Ortanca(s)     JoinStratejisi  Dosya  Okunan(MB)
+1_Once_SortMerge_200bolum                     0.86        0.73      SortMergeJoin      8       32.00   [1.27, 0.73, 0.57]
+2_Ara_SortMerge_8bolum                        0.62        0.59      SortMergeJoin      8       32.00   [0.69, 0.59, 0.57]
+3_Sonra_Broadcast_8bolum                      0.50        0.45  BroadcastHashJoin      8       32.00   [0.60, 0.45, 0.45]

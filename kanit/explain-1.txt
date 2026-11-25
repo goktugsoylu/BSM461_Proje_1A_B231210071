@@ -1,0 +1,88 @@
+== Physical Plan ==
+AdaptiveSparkPlan (14)
++- Sort (13)
+   +- Exchange (12)
+      +- HashAggregate (11)
+         +- Exchange (10)
+            +- HashAggregate (9)
+               +- Project (8)
+                  +- BroadcastHashJoin Inner BuildRight (7)
+                     :- Project (3)
+                     :  +- Filter (2)
+                     :     +- Scan parquet  (1)
+                     +- BroadcastExchange (6)
+                        +- Filter (5)
+                           +- Scan csv  (4)
+
+
+(1) Scan parquet 
+Output [4]: [kaynak#251, kategori#252, saat#256, tarih#257]
+Batched: true
+Location: InMemoryFileIndex [s3a://islenmis/haber_temiz]
+PartitionFilters: [isnotnull(tarih#257), (tarih#257 >= 2026-11-18)]
+PushedFilters: [IsNotNull(saat), GreaterThanOrEqual(saat,8), LessThanOrEqual(saat,18), IsNotNull(kaynak)]
+ReadSchema: struct<kaynak:string,kategori:string,saat:int>
+
+(2) Filter
+Input [4]: [kaynak#251, kategori#252, saat#256, tarih#257]
+Condition : (((isnotnull(saat#256) AND (saat#256 >= 8)) AND (saat#256 <= 18)) AND isnotnull(kaynak#251))
+
+(3) Project
+Output [2]: [kaynak#251, kategori#252]
+Input [4]: [kaynak#251, kategori#252, saat#256, tarih#257]
+
+(4) Scan csv 
+Output [3]: [kaynak#284, tur#285, sehir#286]
+Batched: false
+Location: InMemoryFileIndex [s3a://ham/boyut/haber/kaynaklar.csv]
+PushedFilters: [IsNotNull(kaynak)]
+ReadSchema: struct<kaynak:string,tur:string,sehir:string>
+
+(5) Filter
+Input [3]: [kaynak#284, tur#285, sehir#286]
+Condition : isnotnull(kaynak#284)
+
+(6) BroadcastExchange
+Input [3]: [kaynak#284, tur#285, sehir#286]
+Arguments: HashedRelationBroadcastMode(List(input[0, string, false]),false), [plan_id=1338]
+
+(7) BroadcastHashJoin
+Left keys [1]: [kaynak#251]
+Right keys [1]: [kaynak#284]
+Join type: Inner
+Join condition: None
+
+(8) Project
+Output [3]: [kategori#252, tur#285, sehir#286]
+Input [5]: [kaynak#251, kategori#252, kaynak#284, tur#285, sehir#286]
+
+(9) HashAggregate
+Input [3]: [kategori#252, tur#285, sehir#286]
+Keys [3]: [tur#285, sehir#286, kategori#252]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#324L]
+Results [4]: [tur#285, sehir#286, kategori#252, count#325L]
+
+(10) Exchange
+Input [4]: [tur#285, sehir#286, kategori#252, count#325L]
+Arguments: hashpartitioning(tur#285, sehir#286, kategori#252, 8), ENSURE_REQUIREMENTS, [plan_id=1343]
+
+(11) HashAggregate
+Input [4]: [tur#285, sehir#286, kategori#252, count#325L]
+Keys [3]: [tur#285, sehir#286, kategori#252]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#318L]
+Results [4]: [tur#285, sehir#286, kategori#252, count(1)#318L AS haber_sayisi#319L]
+
+(12) Exchange
+Input [4]: [tur#285, sehir#286, kategori#252, haber_sayisi#319L]
+Arguments: rangepartitioning(haber_sayisi#319L DESC NULLS LAST, 8), ENSURE_REQUIREMENTS, [plan_id=1346]
+
+(13) Sort
+Input [4]: [tur#285, sehir#286, kategori#252, haber_sayisi#319L]
+Arguments: [haber_sayisi#319L DESC NULLS LAST], true, 0
+
+(14) AdaptiveSparkPlan
+Output [4]: [tur#285, sehir#286, kategori#252, haber_sayisi#319L]
+Arguments: isFinalPlan=false
+
