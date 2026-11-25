@@ -1,0 +1,51 @@
+=== 0. BOYUT TABLOSU (kaynaklar.csv) VE HAM VERI ===
+  {'kaynak': 'ajans-kuzey', 'tur': 'ajans', 'sehir': 'İstanbul', 'kurulus_yili': '1952'}
+  {'kaynak': 'ajans-guney', 'tur': 'ajans', 'sehir': 'Adana', 'kurulus_yili': '1987'}
+  {'kaynak': 'gazete-merkez', 'tur': 'gazete', 'sehir': 'Ankara', 'kurulus_yili': '1964'}
+  {'kaynak': 'portal-hizli', 'tur': 'portal', 'sehir': 'İstanbul', 'kurulus_yili': '2011'}
+  {'kaynak': 'yerel-haber', 'tur': 'gazete', 'sehir': 'Sakarya', 'kurulus_yili': '1998'}
+  {'kaynak': 'ekonomi-gunluk', 'tur': 'gazete', 'sehir': 'İstanbul', 'kurulus_yili': '1979'}
+Ham JSON: 14 dosya | 624.71 MB | 2,000,000 kayit | ortalama 327.53 bayt/kayit
+
+=== 1. Z2: JSON -> PARQUET VE KODEK KARSILASTIRMASI ===
+Sema cikarimi: 2.39 s  vs  Elle sema: 0.16 s
+Sorgu suresi (JSON, 3 tur ortanca): 1.84 s
+Bicim/Kodek       Dosya   Boyut(MB)   JSON/P  Yazma(s)  Sorgu(s)
+JSON (ham)           14      624.71     1.00         -      1.84
+Parquet-snappy        8       79.17     7.89      7.45      0.26
+Parquet-zstd          8       44.77    13.95      3.38      0.18
+Parquet-gzip          8       39.03    16.00      3.89      0.19
+
+=== 2. Z4: S3 DOSYA DUZENI VE KUCUK DOSYA ANALIZI ===
+Duzen                      Dosya  Boyut(MB)  Ort(MB)  OkunanDosya  Okunan(MB)  Sure(s)
+a_bolumsuz                     8      79.17     9.90            8       79.20     0.86  | PF: yok
+b_tarih_birlestirmesiz        28      78.91     2.82            2        5.60     0.24  | PF: isnotnull(tarih), (tarih = 2026-11-18)
+c_tarih_repartition           14      78.70     5.62            1        5.60     0.15  | PF: isnotnull(tarih), (tarih = 2026-11-18)
+
+=== 3. Z3: BOLUM ANAHTARI VE SICAK NOKTA (K=8 BOLUM) ===
+Anahtar               FarkliEnBuyukDeger          Pay(%)   Max/Ort
+kaynak                     7ajans-kuzey            48.37      2.14
+kategori                   9gündem                 36.58      2.20
+tarih                     142026-11-24              7.14      2.50
+haber_id           1,995,159None                    0.04      1.00
+Tuzlama (ajans-kuzey#0..15): kaynak Max/Ort 2.14 -> 2.41
+Bilesik anahtar (kaynak|tarih): Max/Ort 2.14 -> 1.29
+
+=== 4. Z10: KIRLI VERI VE TEKRAR SAYIMI ===
+Kusur Turu                            Sayi   Oran(%)
+tekrar_eden_haber_id                 4,841     0.242
+null_veya_bozuk_olay_zamani              0     0.000
+null_veya_bos_haber_id                 838     0.042
+null_veya_bos_kaynak                   764     0.038
+null_veya_bos_kategori                 811     0.041
+null_veya_bos_baslik                   809     0.040
+null_veya_bos_metin                    812     0.041
+
+Ornek 3 kirli kayit:
+  {'olay_zamani': '2026-11-11T20:25:37.816Z', 'haber_id': 'H00000137', 'kaynak': 'ajans-guney', 'kategori': 'spor', 'baslik': None, 'metin': 'Seçimdeki gelişmeler açıklandı. Uzmanlar depremimizden söz ederken seçimlerin etkisine dikkat çekti. Depremler ile ilgili açıklamalar ertelendi.'}
+  {'olay_zamani': '2026-11-11T15:19:53.839Z', 'haber_id': 'H00000228', 'kaynak': 'ajans-kuzey', 'kategori': 'kültür', 'baslik': 'Üniversite rekor kırdı', 'metin': None}
+  {'olay_zamani': '2026-11-11T13:21:31.699Z', 'haber_id': None, 'kaynak': 'yerel-haber', 'kategori': 'gündem', 'baslik': 'Turizmdeki gelişmeler rekor kırdı', 'metin': 'Turizmdeki gelişmeler rekor kırdı. Uzmanlar sınavlardan söz ederken turizmlerin etkisine dikkat çekti. Sınavlar ile ilgili açıklamalar düştü.'}
+Ornek tekrar eden haber_id'ler: [('H00002877', 2), ('H00005243', 2)]
+
+Temiz tablo  : 1,991,971 kayit | 14 dosya | 63.89 MB (zstd) -> s3a://islenmis/haber_temiz/
+Karantina    : 3,188 kayit -> s3a://islenmis/haber_karantina/

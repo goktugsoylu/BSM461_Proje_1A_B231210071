@@ -1,0 +1,36 @@
+asama,bilesen,deney,metrik,deger,birim,notlar
+Asama2_Depolama,Z1,ham_veri_olcumu,ortalama_kayit_boyutu,327.53,bayt,2000000 kayit uzerinden
+Asama2_Depolama,Z2,dosya_bicimi,json_toplam_boyut,624.71,MB,14 dosya
+Asama2_Depolama,Z2,sema_okuma,sema_cikarimi_suresi,2.39,s,
+Asama2_Depolama,Z2,sema_okuma,elle_sema_suresi,0.16,s,
+Asama2_Depolama,Z2,sorgu_suresi,json_sorgu_ortanca,1.84,s,"groupBy(kaynak).count(), 3 tur"
+Asama2_Depolama,Z2,parquet_snappy,toplam_boyut,79.17,MB,"8 dosya, oran 7.89x"
+Asama2_Depolama,Z2,parquet_snappy,yazma_suresi,7.45,s,
+Asama2_Depolama,Z2,parquet_snappy,sorgu_ortanca,0.26,s,"groupBy(kaynak).count(), 3 tur"
+Asama2_Depolama,Z2,parquet_zstd,toplam_boyut,44.77,MB,"8 dosya, oran 13.95x"
+Asama2_Depolama,Z2,parquet_zstd,yazma_suresi,3.38,s,
+Asama2_Depolama,Z2,parquet_zstd,sorgu_ortanca,0.18,s,"groupBy(kaynak).count(), 3 tur"
+Asama2_Depolama,Z2,parquet_gzip,toplam_boyut,39.03,MB,"8 dosya, oran 16.0x"
+Asama2_Depolama,Z2,parquet_gzip,yazma_suresi,3.89,s,
+Asama2_Depolama,Z2,parquet_gzip,sorgu_ortanca,0.19,s,"groupBy(kaynak).count(), 3 tur"
+Asama2_Depolama,Z4,a_bolumsuz,dosya_sayisi,8,adet,ort 9.9 MB
+Asama2_Depolama,Z4,a_bolumsuz,tek_gun_sorgu_suresi,0.86,s,"okunan 8 dosya, 79.2 MB"
+Asama2_Depolama,Z4,b_tarih_birlestirmesiz,dosya_sayisi,28,adet,ort 2.82 MB
+Asama2_Depolama,Z4,b_tarih_birlestirmesiz,tek_gun_sorgu_suresi,0.24,s,"okunan 2 dosya, 5.6 MB"
+Asama2_Depolama,Z4,c_tarih_repartition,dosya_sayisi,14,adet,ort 5.62 MB
+Asama2_Depolama,Z4,c_tarih_repartition,tek_gun_sorgu_suresi,0.15,s,"okunan 1 dosya, 5.6 MB"
+Asama2_Depolama,Z3,anahtar_kaynak,en_dolu_bolu_ortalama,2.14,oran,en buyuk ajans-kuzey (%48.37)
+Asama2_Depolama,Z3,anahtar_kategori,en_dolu_bolu_ortalama,2.2,oran,en buyuk gündem (%36.58)
+Asama2_Depolama,Z3,anahtar_tarih,en_dolu_bolu_ortalama,2.5,oran,en buyuk 2026-11-24 (%7.14)
+Asama2_Depolama,Z3,anahtar_haber_id,en_dolu_bolu_ortalama,1.0,oran,en buyuk None (%0.04)
+Asama2_Depolama,Z3,sicak_nokta_cozum_tuzlama,en_dolu_bolu_ortalama,2.41,oran,once 2.14
+Asama2_Depolama,Z3,sicak_nokta_cozum_bilesik,en_dolu_bolu_ortalama,1.29,oran,kaynak|tarih
+Asama2_Depolama,Z10,kirli_veri,tekrar_eden_haber_id,4841,kayit,%0.242
+Asama2_Depolama,Z10,kirli_veri,null_veya_bozuk_olay_zamani,0,kayit,%0.0
+Asama2_Depolama,Z10,kirli_veri,null_veya_bos_haber_id,838,kayit,%0.042
+Asama2_Depolama,Z10,kirli_veri,null_veya_bos_kaynak,764,kayit,%0.038
+Asama2_Depolama,Z10,kirli_veri,null_veya_bos_kategori,811,kayit,%0.041
+Asama2_Depolama,Z10,kirli_veri,null_veya_bos_baslik,809,kayit,%0.04
+Asama2_Depolama,Z10,kirli_veri,null_veya_bos_metin,812,kayit,%0.041
+Asama2_Depolama,Z10,temizleme_sonucu,temiz_kayit_sayisi,1991971,kayit,"14 dosya, 63.89 MB"
+Asama2_Depolama,Z10,temizleme_sonucu,karantina_kayit_sayisi,3188,kayit,eksik/bozuk alanlar
