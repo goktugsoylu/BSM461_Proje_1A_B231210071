@@ -1,0 +1,24 @@
+=== Z7 DELTA LAKE: SURUMLER VE ZAMAN YOLCULUGU ===
+Delta Tablo Yolu : s3a://tablolar/haber_delta
+Surum 0 (overwrite) : 1,991,971 satir | 49.11 s
+Surum 1 (append +1000 yeni gun) : 1,992,971 satir | 2.94 s
+
+--- DESCRIBE HISTORY ---
+  version=1 | ts=2026-11-26 14:15:33 | op=WRITE
+  version=0 | ts=2026-11-26 14:15:23 | op=WRITE
+
+--- ZAMAN YOLCULUGU (versionAsOf) ---
+  versionAsOf=0 okunan satir : 1,991,971
+  versionAsOf=1 okunan satir : 1,992,971
+  Fark (eklenen yeni gun)    : 1,000 satir
+
+=== Z7 ATOMIK YAZMA DOGRULAMASI (DELTA - Ctrl+C SONRASI) ===
+Tablo okunabildi mi? : EVET (bozulma yok)
+Okunan satir sayisi  : 1,992,971 (Surum 1 ile birebir ayni)
+DESCRIBE HISTORY     : [(1, 'WRITE'), (0, 'WRITE')]
+Klasordeki .parquet  : 15 dosya (yarim yazilanlar _delta_log'a islenmedigi icin yok sayilir)
+
+=== Z7 ATOMIK YAZMA DOGRULAMASI (CIPLAK PARQUET - Ctrl+C SONRASI) ===
+Klasor               : s3a://islenmis/haber_parquet_kesinti_test
+Okuma sonucu         : OKUMA HATASI: AnalysisException: [UNABLE_TO_INFER_SCHEMA] Unable to infer schema for Parquet. It must be specified manually.
+Klasordeki .parquet  : 0 | _temporary icindeki yarim dosya : 8

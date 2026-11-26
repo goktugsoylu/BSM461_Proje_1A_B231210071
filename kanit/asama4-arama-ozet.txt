@@ -1,0 +1,37 @@
+=== Z9 ELASTICSEARCH: TURKCE vs STANDARD ANALIZOR KARSILASTIRMASI ===
+Indekslenen haber sayisi : 20,000 (Grup: B231210071)
+  haberler_turkce   -> 20,000 belge | 3.86 s | 1.86 MB
+  haberler_standard -> 20,000 belge | 1.96 s | 1.91 MB
+
+--- ANALIZOR TOKEN VE SONUC SAYISI KARSILASTIRMASI ---
+Sorgu               Turkce Token        Std Token                 TR Sonuc  Std Sonuc   TR(ms)  Std(ms)
+ihracatımızdan      ['ihracat']         ['ihracatımızdan']           2,077        639    26.08     6.83
+enflasyonlarından   ['enflasyon']       ['enflasyonlarından']        1,279          0     6.95     5.06
+İstanbul'daki       ['istanbul']        ["istanbul'daki"]                0          0     5.00     4.78
+yatırımcılarımız    ['yatırımcı']       ['yatırımcılarımız']             0          0     5.00     4.94
+
+--- ORNEK ARAMA SORGUSU ('ihracatımızdan' - BM25 ilk 3 sonuc, baslik^2) ---
+  BM25=7.34 | [ajans-kuzey / dünya] İhracat tartışılıyor
+  BM25=7.34 | [gazete-merkez / ekonomi] İhracat açıklandı
+  BM25=7.34 | [ajans-kuzey / kültür] İhracat ertelendi
+
+--- TOPLAMA (AGGREGATION) SORGUSU: KAYNAK VE KATEGORI DAGILIMI ---
+Kaynak bazinda haber sayisi (en baskin kategoriyle):
+  ajans-kuzey        -> 10,640 haber  (ilk 3: dünya:6912, spor:571, ekonomi:565)
+  ajans-guney        ->  3,907 haber  (ilk 3: eğitim:525, kültür:516, teknoloji:511)
+  gazete-merkez      ->  2,114 haber  (ilk 3: gündem:1384, spor:112, dünya:111)
+  portal-hizli       ->  1,469 haber  (ilk 3: teknoloji:938, kültür:88, sağlık:81)
+  yerel-haber        ->  1,020 haber  (ilk 3: kültür:142, teknoloji:140, eğitim:129)
+  ekonomi-gunluk     ->    850 haber  (ilk 3: kültür:124, sağlık:114, dünya:113)
+Kategori bazinda haber sayisi:
+  dünya              ->  7,789 haber
+  gündem             ->  2,658 haber
+  teknoloji          ->  2,287 haber
+  kültür             ->  1,487 haber
+  spor               ->  1,473 haber
+  ekonomi            ->  1,464 haber
+  eğitim             ->  1,454 haber
+  sağlık             ->  1,388 haber
+
+--- MAPPING 'dynamic: strict' TESTI ---
+  BASARILI: Tanimsiz alan reddedildi -> BadRequestError (strict_dynamic_mapping_exception)

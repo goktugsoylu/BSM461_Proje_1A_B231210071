@@ -1,0 +1,16 @@
+=== Z6 SERVIS DEPOSU (MONGODB): VERI MODELI VE GECIKME OLCUMLERI ===
+Senaryo p99 siniri : <= 200 ms (Grup: B231210071, her sorgu 200 tekrar)
+Yuklenen koleksiyonlar: kaynak_ozetleri (6), gunluk_seyir (14), saatlik_dagilim (24), son_haberler (20,000 belge, 0.18 s)
+
+--- SORGU GECIKME OLCUMLERI (ms) ---
+Sorgu                                         Ort(ms)  p50(ms)  p95(ms)  p99(ms)  Plan
+S1: Tek kaynak ozeti (_id)                       0.55     0.53     0.73     0.95  IDHACK
+S2: Son 7 gun kategori seyri (gomulu)            0.69     0.66     0.91     1.15  IXSCAN (_id)
+S3_Once: Kaynagin son 20 haberi (indekssiz)     11.88    10.91    16.39    23.85  COLLSCAN
+S3_Sonra: Kaynagin son 20 haberi (indeksli)      0.69     0.67     0.97     1.25  IXSCAN (idx_kaynak_zaman)
+
+--- SHARD ANAHTARI VE MONOTON ARTAN ANAHTAR RISKI ---
+  Secilen shard anahtari : { haber_id: 'hashed' } veya bilesik { kaynak: 1, haber_id: 1 }
+  Neden monoton artan anahtar (olay_zamani / artan ID) secilmedi?
+  -> Tum yeni yazmalar (tepe yukte 1.200 haber/sn) her zaman en son araligi tutan tek shard'a
+     yigilir (yazma sicak noktasi / write hotspot) ve yatay olcekleme bozulur.

@@ -266,3 +266,37 @@ Kit **tek bilgisayarda** çalışmak için sadeleştirildi. Gerçek bir sistemde
 - Spark `local[*]` kipinde: sürücü ve yürütücüler aynı süreçte; gerçek küme yok (H6).
 - Elasticsearch **tek düğüm, replika 0**: küme sarı ya da yeşil görünür, ama kopyası yoktur (H8, H3).
 - Güvenlik **kapalı**: şifre ve TLS yok. Asla internete açık bir makinede böyle çalıştırmayın.
+
+---
+
+## 9. Grup B231210071 — Sıfırdan Çalıştırma Adımları (Şablon 4: Haber Akışı)
+
+```bash
+# 1) Çekirdek servisleri başlat (Kafka, SeaweedFS/S3, Spark)
+docker compose up -d
+
+# 2) Toplu ham veriyi üret (2.000.000 kayıt, 14 gün)
+docker compose exec araclar python araclar/uretici.py --grup B231210071 --sablon haber --toplu 2000000 --gun 14
+
+# 3) Aşama 3 — Toplu Hat (Z5)
+docker compose exec spark spark-submit is/toplu_is.py
+
+# 4) Aşama 4 — Delta Lake (Z7: Sürüm 0/1 ve Zaman Yolculuğu)
+docker compose exec spark spark-submit is/delta_tablo.py --mod surum
+
+# 5) Aşama 4 — Arama / Elasticsearch Türkçe Analizör (Z9)
+docker compose --profile arama up -d
+docker compose exec araclar python araclar/arama_analiz.py
+
+# 6) Aşama 4 — Servis Deposu / MongoDB (Z6)
+docker compose --profile servis up -d
+docker compose exec araclar python araclar/servis_deposu.py
+
+# 7) Aşama 5 — Kafka Konu Tasarımı (6 bölüm) ve Akış Hattı (Z8)
+docker compose exec kafka sh -c 'CMD=$(command -v kafka-topics \vert{}\vert{} echo /opt/kafka/bin/kafka-topics.sh);$CMD --bootstrap-server localhost:9092 --delete --topic haberler 2>/dev/null; sleep 2; $CMD --bootstrap-server localhost:9092 --create --topic haberler --partitions 6 --replication-factor 1'
+
+# İki ayrı terminalde çalıştırın:
+# Terminal 1 (Akış işi):
+docker compose exec spark spark-submit is/akis_iskelet.py --sablon haber --cikti s3 --soru ikisi --watermark "2 minutes"
+# Terminal 2 (Akış üreticisi):
+docker compose exec araclar python araclar/uretici.py --grup B231210071 --sablon haber --hiz 50 --sure 90 --gec-orani 0.05

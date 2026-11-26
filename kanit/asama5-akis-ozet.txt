@@ -1,0 +1,15 @@
+=== Z8 WATERMARK VE GEC VERI DENEYI (Grup B231210071 | Watermark: 2 minutes) ===
+Deney 1A (gec_orani=%5, senaryo karti):
+  Kafka'dan okunan toplam olay : 3,005 (3,000 + ~5 tekrar olay)
+  Watermark nedeniyle atilan   : 101 (%3.36)
+
+Deney 1B (gec_orani=%30, stres testi):
+  Kafka'dan okunan toplam olay : 3,005 (3,000 + ~5 tekrar olay)
+  Watermark nedeniyle atilan   : 599 (%19.93)
+
+=== Z8 YENIDEN BASLATMA (CHECKPOINT) DENEYI (cikti=s3, wm=30s) ===
+  Durdurma/baslatma  : Calisirken Ctrl+C ile kesildi, ayni komutla yeniden baslatildi
+  Kurtarma kaniti    : Spark v4 state snapshot'ini checkpoint'ten yukledi (offsets: 0..9)
+  Parquet satir/tekil: 38 satir / 38 tekil (pencere, kategori) -> Cift sayim/yazim YOK
+  Kapanan pencere top: 1,632 haber
+  Teslim garantisi   : Uretici->Kafka (en az bir kez + idempotent), Spark->S3 Parquet (checkpoint + _spark_metadata ile tam bir kez / exactly-once)

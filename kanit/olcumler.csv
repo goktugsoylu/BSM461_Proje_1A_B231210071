@@ -40,3 +40,31 @@ Asama3_TopluHat,Z5,2_Ara_SortMerge_8bolum,ortalama_sure,0.62,s,"3 tur: [0.69, 0.
 Asama3_TopluHat,Z5,2_Ara_SortMerge_8bolum,ortanca_sure,0.59,s,"8 dosya, 32.0 MB"
 Asama3_TopluHat,Z5,3_Sonra_Broadcast_8bolum,ortalama_sure,0.5,s,"3 tur: [0.60, 0.45, 0.45], BroadcastHashJoin"
 Asama3_TopluHat,Z5,3_Sonra_Broadcast_8bolum,ortanca_sure,0.45,s,"8 dosya, 32.0 MB"
+Asama4_Delta,Z7,delta_surum_0,satir_sayisi,1991971,satir,ilk overwrite (49.11 s)
+Asama4_Delta,Z7,delta_surum_1,satir_sayisi,1992971,satir,yeni gun append +1000 (2.94 s)
+Asama4_Delta,Z7,zaman_yolculugu,v0_okunan_satir,1991971,satir,versionAsOf=0 ile eski surum okundu
+Asama4_Delta,Z7,atomik_kesinti_delta,kesinti_sonrasi_satir,1992971,satir,"Ctrl+C sonrasi tablo bozulmadi, son commit korundu"
+Asama4_Delta,Z7,atomik_kesinti_parquet,kesinti_sonrasi_satir,-1,satir,Ciplak Parquet Ctrl+C sonrasi: OKUMA HATASI: AnalysisException: [UNABLE_TO_INFER_SCHEMA] Unable to infer schema
+Asama4_Arama,Z9,indeksleme_turkce,sure,3.86,s,"20000 belge, 1.86 MB"
+Asama4_Arama,Z9,indeksleme_turkce,boyut,1.86,MB,"1 shard, 0 replica"
+Asama4_Arama,Z9,indeksleme_standard,sure,1.96,s,"20000 belge, 1.91 MB"
+Asama4_Arama,Z9,indeksleme_standard,boyut,1.91,MB,"1 shard, 0 replica"
+Asama4_Arama,Z9,sorgu_ihracatımızdan,turkce_sonuc,2077,belge,"token=['ihracat'], 26.08 ms"
+Asama4_Arama,Z9,sorgu_ihracatımızdan,standard_sonuc,639,belge,"token=['ihracatımızdan'], 6.83 ms"
+Asama4_Arama,Z9,sorgu_enflasyonlarından,turkce_sonuc,1279,belge,"token=['enflasyon'], 6.95 ms"
+Asama4_Arama,Z9,sorgu_enflasyonlarından,standard_sonuc,0,belge,"token=['enflasyonlarından'], 5.06 ms"
+Asama4_Arama,Z9,sorgu_İstanbul'daki,turkce_sonuc,0,belge,"token=['istanbul'], 5.0 ms"
+Asama4_Arama,Z9,sorgu_İstanbul'daki,standard_sonuc,0,belge,"token=[""istanbul'daki""], 4.78 ms"
+Asama4_Arama,Z9,sorgu_yatırımcılarımız,turkce_sonuc,0,belge,"token=['yatırımcı'], 5.0 ms"
+Asama4_Arama,Z9,sorgu_yatırımcılarımız,standard_sonuc,0,belge,"token=['yatırımcılarımız'], 4.94 ms"
+Asama4_Servis,Z6,s1_kaynak_profili,p99_gecikme,0.95,ms,"ort=0.55 ms, p50=0.53 ms, IDHACK"
+Asama4_Servis,Z6,s2_son7gun_seyir,p99_gecikme,1.15,ms,"ort=0.69 ms, gomulu belge"
+Asama4_Servis,Z6,s3_son_haberler_indekssiz,p99_gecikme,23.85,ms,"ort=11.88 ms, COLLSCAN (20k belge)"
+Asama4_Servis,Z6,s3_son_haberler_indeksli,p99_gecikme,1.25,ms,"ort=0.69 ms, IXSCAN (kaynak+olay_zamani)"
+Asama5_Akis,Z8,watermark_gec_05,kafka_girdi_olay,3005,olay,"gec_orani=%5, wm=2 dk, 60 sn x 50/sn (+5 tekrar)"
+Asama5_Akis,Z8,watermark_gec_05,watermark_atilan,101,olay,kayip=%3.36 (senaryo siniri <= %0.1)
+Asama5_Akis,Z8,watermark_gec_30,kafka_girdi_olay,3005,olay,"gec_orani=%30, wm=2 dk, 60 sn x 50/sn (+5 tekrar)"
+Asama5_Akis,Z8,watermark_gec_30,watermark_atilan,599,olay,kayip=%19.93
+Asama5_Akis,Z8,restart_checkpoint,checkpoint_batch_sayisi,10,batch,"offsets 0..9, v4 sonrasi yeniden baslatildi"
+Asama5_Akis,Z8,restart_checkpoint,parquet_satir_sayisi,38,satir,"tekil (pencere,kategori)=38 -> cift yazim yok"
+Asama5_Akis,Z8,restart_checkpoint,kapanan_pencere_haber,1632,olay,"append modu, wm=30s, S3 Parquet + checkpoint"
